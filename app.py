@@ -6,114 +6,123 @@ import uuid
 # PAGE CONFIG
 # ===============================
 st.set_page_config(
-    page_title="Agentic AI",
+    page_title="ZISH",
     page_icon="✨",
     layout="wide",
 )
 
 # ===============================
-# SESSION STATE INIT
+# SESSION STATE
 # ===============================
-if "theme" not in st.session_state:
-    st.session_state.theme = "light"
-
 if "chats" not in st.session_state:
     st.session_state.chats = {}
 
 if "current_chat_id" not in st.session_state:
-    new_id = str(uuid.uuid4())
-    st.session_state.current_chat_id = new_id
-    st.session_state.chats[new_id] = []
+    cid = str(uuid.uuid4())
+    st.session_state.current_chat_id = cid
+    st.session_state.chats[cid] = []
 
 # ===============================
-# THEME STYLES
+# TAILWIND CDN + GLOBAL DARK MODE
 # ===============================
-if st.session_state.theme == "dark":
-    bg = "#0f172a"
-    panel = "#020617"
-    text = "#e5e7eb"
-    bubble_user = "#1f2937"
-    bubble_ai = "#020617"
-else:
-    bg = "#f9fafb"
-    panel = "#ffffff"
-    text = "#111827"
-    bubble_user = "#111827"
-    bubble_ai = "#ffffff"
+st.markdown("""
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class'
+}
+</script>
+</head>
+</html>
 
-st.markdown(f"""
 <style>
-body {{ background-color: {bg}; }}
-.main {{ background-color: {bg}; color: {text}; }}
-.chat-container {{ max-width: 820px; margin: auto; padding-top: 40px; }}
-.user {{ background:{bubble_user}; color:white; padding:12px 16px;
-border-radius:14px; max-width:75%; margin-left:auto; margin-bottom:12px; }}
-.ai {{ background:{bubble_ai}; color:{text}; padding:12px 16px;
-border-radius:14px; max-width:75%; margin-bottom:12px;
-border:1px solid #e5e7eb; }}
-[data-testid="stSidebar"] {{ background-color:{panel}; }}
+/* lock sidebar scroll */
+[data-testid="stSidebar"],
+[data-testid="stSidebarContent"] {
+    overflow-y: hidden !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ===============================
-# SIDEBAR
+# SIDEBAR (ZISH)
 # ===============================
-st.sidebar.markdown("## 🧠 Agentic AI")
+with st.sidebar:
+    st.markdown("""
+    <div class="h-screen bg-slate-950 text-slate-200 px-4 py-6">
+        <h1 class="text-xl font-semibold tracking-wide">ZISH</h1>
+        <p class="text-xs text-slate-400 mt-1">AI workspace</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Theme toggle
-if st.sidebar.toggle("🌙 Dark mode", st.session_state.theme == "dark"):
-    st.session_state.theme = "dark"
-else:
-    st.session_state.theme = "light"
+    st.divider()
 
-st.sidebar.divider()
-
-# New chat
-if st.sidebar.button("➕ New chat"):
-    new_id = str(uuid.uuid4())
-    st.session_state.current_chat_id = new_id
-    st.session_state.chats[new_id] = []
-    st.rerun()
-
-# Chat history
-st.sidebar.markdown("### 💬 Chat history")
-for cid in st.session_state.chats:
-    if st.sidebar.button(f"Chat {cid[:8]}", key=cid):
+    if st.button("➕ New chat", use_container_width=True):
+        cid = str(uuid.uuid4())
         st.session_state.current_chat_id = cid
+        st.session_state.chats[cid] = []
         st.rerun()
 
-st.sidebar.divider()
+    st.markdown("### 💬 History")
+    for cid in st.session_state.chats:
+        if st.button(f"Chat {cid[:8]}", key=f"chat_{cid}", use_container_width=True):
+            st.session_state.current_chat_id = cid
+            st.rerun()
 
-# File upload
-st.sidebar.markdown("### 📎 Upload document")
-uploaded_file = st.sidebar.file_uploader(
-    "PDF or TXT", type=["pdf", "txt"]
-)
+    st.divider()
+
+    st.markdown("### 📎 Upload")
+    uploaded_file = st.file_uploader(
+        "PDF or TXT",
+        type=["pdf", "txt"],
+        label_visibility="collapsed"
+    )
 
 document_text = None
 if uploaded_file:
     if uploaded_file.type == "application/pdf":
         document_text = read_pdf(uploaded_file)
-        st.sidebar.success("Document loaded")
     else:
         document_text = uploaded_file.read().decode("utf-8")
-        st.sidebar.success("Document loaded")
 
 # ===============================
 # MAIN CHAT UI
 # ===============================
-st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+st.markdown("""
+<div class="dark bg-slate-900 min-h-screen">
+  <div class="max-w-3xl mx-auto pt-10 px-4">
+""", unsafe_allow_html=True)
 
 messages = st.session_state.chats[st.session_state.current_chat_id]
 
 if len(messages) == 0:
-    st.markdown("### Welcome 👋  \nAsk anything or upload a document.")
+    st.markdown("""
+    <div class="text-center mb-10">
+        <h2 class="text-2xl font-semibold text-slate-100">Welcome to ZISH</h2>
+        <p class="text-slate-400 mt-2">Ask anything or upload a document</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 for msg in messages:
-    role = msg["role"]
-    content = msg["content"]
-    cls = "user" if role == "user" else "ai"
-    st.markdown(f'<div class="{cls}">{content}</div>', unsafe_allow_html=True)
+    if msg["role"] == "user":
+        st.markdown(f"""
+        <div class="flex justify-end mb-3">
+            <div class="bg-slate-700 text-white px-4 py-3 rounded-2xl max-w-[75%]">
+                {msg["content"]}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="flex justify-start mb-3">
+            <div class="bg-slate-800 text-slate-200 px-4 py-3 rounded-2xl max-w-[75%] border border-slate-700">
+                {msg["content"]}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 prompt = st.chat_input("Ask anything...")
 
@@ -123,5 +132,8 @@ if prompt:
     messages.append({"role": "assistant", "content": response})
     st.rerun()
 
-st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("""
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
